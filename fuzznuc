@@ -1,0 +1,3 @@
+#!/bin/bash
+#need sequence file (c_elegans.canonical_bioproject.current.mRNA_transcripts.fa) 
+fuzznuc -sequence c_elegans.canonical_bioproject.current.mRNA_transcripts.fa -pattern "TGTA[CTA][ACT][AT][ACU]" -outfile FBF_sites.fuzznuc
