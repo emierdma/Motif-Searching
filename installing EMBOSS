@@ -1,0 +1,30 @@
+#!/bin/bash
+#download EMBOSS
+#in /N/slate/emierdma/fuzznuc
+wget -m 'ftp://emboss.open-bio.org/pub/EMBOSS/'
+
+#unpack source code
+cd cd emboss.open-bio.org/
+cd pub
+cd EMBOSS
+gunzip EMBOSS-6.6.0.tar.gz 
+tar xf EMBOSS-6.6.0.tar 
+
+#configure EMBOSS
+cd EMBOSS-6.6.0
+./configure --prefix=/N/slate/emierdma/fuzznuc/emboss
+
+#compile EMBOSS
+#in same directory you ran configure command
+make
+
+#install libraries and applications 
+make install
+
+#set path
+PATH="$PATH:/N/slate/emierdma/fuzznuc/emboss/bin"
+export PATH
+
+#test installation- should show version number
+embossversion
+
