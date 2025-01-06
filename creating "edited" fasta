@@ -1,7 +1,7 @@
 #!/bin/bash
 #Use Bed2Fasta to extract relevant sequences from genome database file (in this case, edited 3'UTRs): https://meme-suite.org/meme/tools/bed2fasta. save as edited_3pUTRs.fasta
 
-#create tab-delimited file editing_site_changes.bed containing the following columns: chromosome number, chromosome position, base to change the site to
+#create tab-delimited file pos.txt containing the following columns: chromosome number, chromosome position, base to change the site to
   example:
       chrI	1347117	C
       chrI	1347136	C
@@ -15,25 +15,48 @@
   #!/usr/bin/env python
   from collections import defaultdict
 
-  with open('editing_site_changes.bed', 'r') as f:
-        pos = defaultdict(list)
-        for line in f:
-                pos[line.strip().split('\t')[0]].append((int(line.strip().split('\t')[1]), line.strip().split('\t')[2]))
+  # Function to normalize FASTA headers (update based on your format)
+  def normalize_header(header):
+      return header.split(':')[0]  # Adjust as needed
 
-  with open('edited_3pUTRs.fasta', 'r') as fasta:
-        with open('input_corr.fasta', 'w') as out:
-                for line in fasta:
-                        if line.startswith(">"):
-                                h = line.strip().split('>')[1]
-                                s = list(next(fasta).strip())
-                                if h in pos:
-                                        for n in pos[h]:
-                                                s[n[0]-1] = n[1]
-                                        out.write('>' + h + '\n' + ''.join(s) + '\n')
+  # Read BED file and store editing positions
+  pos = defaultdict(list)
+  with open('editing_site_changes.bed', 'r') as f:
+      for line in f:
+          fields = line.strip().split('\t')
+          if len(fields) >= 3:
+              normalized_header = fields[0]  # Normalize if necessary
+              pos[normalized_header].append((int(fields[1]), fields[2]))
+
+  # Debug: Print normalized BED headers
+  print(f"First few entries in BED dictionary: {list(pos.keys())[:5]}")
+
+  # Process FASTA file
+  with open('edited_3pUTRs.fasta', 'r') as fasta, open('input_corr.fasta', 'w') as out:
+      while True:
+          header = fasta.readline()
+          if not header:  # EOF
+              break
+          if header.startswith(">"):
+              full_header = header.strip()  # Retain the full header
+              normalized_h = normalize_header(full_header[1:])  # Remove '>' for normalization
+              sequence = list(fasta.readline().strip())  # Read the sequence line
+              if normalized_h in pos:
+                  for n in pos[normalized_h]:
+                      if 0 <= n[0] - 1 < len(sequence):  # Ensure valid position
+                          sequence[n[0] - 1] = n[1]
+                      else:
+                          print(f"Warning: Position {n[0]} out of range for {normalized_h}")
+                  # Write the full header and updated sequence to the output file
+                  out.write(full_header + '\n' + ''.join(sequence) + '\n')
+              else:
+                  print(f"Header {normalized_h} not found in BED file")
+
+
 
 #copy .bed file, .fasta file, and .py file into directory               
 #linearize fasta file
-perl -pe '$. > 1 and /^>/ ? print "\n" : chomp' edited_3pUTRs.fasta > edited_3pUTRs.linear.fasta
+perl -pe '$. > 1 and /^>/ ? print "\n" : chomp' edited_3pUTRs.fasta > input.fasta
 
 #run python script
 python editor.py
