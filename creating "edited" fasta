@@ -1,0 +1,39 @@
+#!/bin/bash
+#Use Bed2Fasta to extract relevant sequences from genome database file (in this case, edited 3'UTRs): https://meme-suite.org/meme/tools/bed2fasta. save as edited_3pUTRs.fasta
+
+#create tab-delimited file editing_site_changes.bed containing the following columns: chromosome number, chromosome position, base to change the site to
+  example:
+      chrI	1347117	C
+      chrI	1347136	C
+      chrI	1347138	C
+      chrI	1347143	C
+      chrI	1347215	C
+      chrI	1347216	C
+
+#create python script (editor.py):
+
+  #!/usr/bin/env python
+  from collections import defaultdict
+
+  with open('editing_site_changes.bed', 'r') as f:
+        pos = defaultdict(list)
+        for line in f:
+                pos[line.strip().split('\t')[0]].append((int(line.strip().split('\t')[1]), line.strip().split('\t')[2]))
+
+  with open('edited_3pUTRs.fasta', 'r') as fasta:
+        with open('input_corr.fasta', 'w') as out:
+                for line in fasta:
+                        if line.startswith(">"):
+                                h = line.strip().split('>')[1]
+                                s = list(next(fasta).strip())
+                                if h in pos:
+                                        for n in pos[h]:
+                                                s[n[0]-1] = n[1]
+                                        out.write('>' + h + '\n' + ''.join(s) + '\n')
+
+#copy .bed file, .fasta file, and .py file into directory               
+#linearize fasta file
+perl -pe '$. > 1 and /^>/ ? print "\n" : chomp' edited_3pUTRs.fasta > edited_3pUTRs.linear.fasta
+
+#run python script
+python editor.py
