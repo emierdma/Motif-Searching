@@ -1,0 +1,43 @@
+#Download and unpack annotation gtf file 
+wget https://ftp.ensembl.org/pub/release-111/gtf/caenorhabditis_elegans/Caenorhabditis_elegans.WBcel235.111.gtf.gz
+gunzip Caenorhabditis_elegans.WBcel235.111.gtf.gz
+
+#Write an excel file consisting of chromosome number in the 1st column, start coordinate in the 2nd column, and end coordinate in the 3rd column (no header). Save as fimo_output.csv file  
+    example:
+      I  1011250  1011278
+      I  2348129  2348233
+
+#Create annotation python script (annotategenenameID.py)
+      import argparse
+      import sys
+      import os
+      import pandas as pd
+      
+      def extract_gene_info(attributes):
+          pairs = attributes.strip().split(';')
+          gene_id = None
+          gene_name = None
+          transcript_id = None
+          for pair in pairs:
+              if pair.strip():
+                  key_value = pair.strip().split(' ', 1)
+                  if len(key_value) != 2:
+                      continue
+                  key = key_value[0]
+                  value = key_value[1].strip('"')
+                  if key == 'gene_id':
+                      gene_id = value
+                  elif key == 'gene_name':
+                      gene_name = value
+          return gene_id, gene_name
+      
+      if __name__ == '__main__':
+          ap = argparse.ArgumentParser(prog=os.path.basename(sys.argv[0]), description='Annotate genomic regions with gene information.')
+          ap.add_argument('--gtf', required=True, help='GTF file containing annotations; can be any GTF file from WormBase')
+          ap.add_argument('--file', required=True, help='CSV file containing user input with columns: chrNum,start,end')
+          ap.add_argument('--o', required=True, help='Path for output file')
+          args = ap.parse_args()
+
+#copy .gtf, .csv. and .py files into working directory
+#Run Python script 
+python annotategenenameID.py --gtf Caenorhabditis_elegans.WBcel235.111.gtf --file fimo_output.csv --o fimo_output_annotated.csv 
