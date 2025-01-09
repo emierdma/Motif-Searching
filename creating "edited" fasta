@@ -12,90 +12,86 @@
 
 #create python script (editor.py):
 
-    #!/usr/bin/env python
-    from collections import defaultdict
-    
-    def parse_header(header):
-        try:
-            parts = header.split()
-            seq_id_and_range = parts[0]
-            seq_id, range_part = seq_id_and_range.split(':')
-            range_part = range_part.split('(')[0]
-            start, end = map(int, range_part.split('-'))
-            return seq_id, start, end
-        except Exception as e:
-            print(f"Error parsing header: {header}. Details: {e}")
-            raise
-    
-    # Read BED file and store editing positions
-    pos = defaultdict(list)
-    with open('pos.txt', 'r') as f:
-        for line in f:
-            fields = line.strip().split('\t')
-            if len(fields) >= 3:
-                normalized_header = fields[0]
-                pos[normalized_header].append((int(fields[1]) + 1, fields[2]))
-    
-    print(f"First few entries in BED dictionary: {list(pos.keys())[:5]}")
-    
-    # Group sequences by chromosome
-    sequences = defaultdict(list)
-    with open('input.fasta', 'r') as fasta:
-        while True:
-            header = fasta.readline()
-            if not header:  # EOF
-                break
-            if header.startswith(">"):
-                full_header = header.strip()
-                seq_id, start, end = parse_header(full_header[1:])
-                sequence = fasta.readline().strip()
-                sequences[seq_id].append((start, end, full_header, sequence))
-    
-    # Process positions for each chromosome
-    with open('input_corr.fasta', 'w') as out:
-        for seq_id, entries in sequences.items():
-            # Combine sequences for the chromosome
-            combined_sequence = []
-            ranges = []
-            headers = []
-            
-            for start, end, full_header, sequence in entries:
-                combined_sequence.extend(sequence)
-                ranges.append((start, end))
-                headers.append((start, end, full_header, sequence))
-            
-            # Process positions in the combined sequence
-            for n in pos[seq_id]:
-                position = n[0]  # Global position
-                updated_base = n[1]
-                
-                # Find the appropriate segment for the position
-                for i, (start, end) in enumerate(ranges):
-                    if start <= position <= end:
-                        adjusted_pos = position - start
-                        segment_index = sum(len(h[3]) for h in headers[:i]) + adjusted_pos
-                        if 0 <= segment_index < len(combined_sequence):
-                            combined_sequence[segment_index] = updated_base
-                        else:
-                            print(f"Warning: Position {position} out of range for {seq_id}")
-                        break
-                else:
-                    print(f"Position {position} not found in any range for {seq_id}")
-    
-            # Write updated sequences back to the output
-            current_index = 0
-            for start, end, full_header, sequence in headers:
-                segment_length = len(sequence)
-                updated_segment = ''.join(combined_sequence[current_index:current_index + segment_length])
-                out.write(full_header + '\n' + updated_segment + '\n')
-                current_index += segment_length
-
-
-
-
+      #!/usr/bin/env python
+      from collections import defaultdict
+      
+      def parse_header(header):
+          try:
+              parts = header.split()
+              seq_id_and_range = parts[0]
+              seq_id, range_part = seq_id_and_range.split(':')
+              range_part = range_part.split('(')[0]
+              start, end = map(int, range_part.split('-'))
+              return seq_id, start, end
+          except Exception as e:
+              print(f"Error parsing header: {header}. Details: {e}")
+              raise
+      
+      # Read BED file and store editing positions
+      pos = defaultdict(list)
+      with open('pos.txt', 'r') as f:
+          for line in f:
+              fields = line.strip().split('\t')
+              if len(fields) >= 3:
+                  normalized_header = fields[0]
+                  pos[normalized_header].append((int(fields[1]) - 1, fields[2]))
+      
+      print(f"First few entries in BED dictionary: {list(pos.keys())[:5]}")
+      
+      # Group sequences by chromosome
+      sequences = defaultdict(list)
+      with open('input.fasta', 'r') as fasta:
+          while True:
+              header = fasta.readline()
+              if not header:  # EOF
+                  break
+              if header.startswith(">"):
+                  full_header = header.strip()
+                  seq_id, start, end = parse_header(full_header[1:])
+                  sequence = fasta.readline().strip()
+                  sequences[seq_id].append((start, end, full_header, sequence))
+      
+      # Process positions for each chromosome
+      with open('input_corr.fasta', 'w') as out:
+          for seq_id, entries in sequences.items():
+              # Combine sequences for the chromosome
+              combined_sequence = []
+              ranges = []
+              headers = []
+              
+              for start, end, full_header, sequence in entries:
+                  combined_sequence.extend(sequence)
+                  ranges.append((start, end))
+                  headers.append((start, end, full_header, sequence))
+              
+              # Process positions in the combined sequence
+              for n in pos[seq_id]:
+                  position = n[0]  # Global position
+                  updated_base = n[1]
+                  
+                  # Find the appropriate segment for the position
+                  for i, (start, end) in enumerate(ranges):
+                      if start <= position <= end:
+                          adjusted_pos = position - start
+                          segment_index = sum(len(h[3]) for h in headers[:i]) + adjusted_pos
+                          if 0 <= segment_index < len(combined_sequence):
+                              combined_sequence[segment_index] = updated_base
+                          else:
+                              print(f"Warning: Position {position} out of range for {seq_id}")
+                          break
+                  else:
+                      print(f"Position {position} not found in any range for {seq_id}")
+      
+              # Write updated sequences back to the output
+              current_index = 0
+              for start, end, full_header, sequence in headers:
+                  segment_length = len(sequence)
+                  updated_segment = ''.join(combined_sequence[current_index:current_index + segment_length])
+                  out.write(full_header + '\n' + updated_segment + '\n')
+                  current_index += segment_length
 
 #copy .bed file, .fasta file, and .py file into directory               
-#linearize fasta file
+#linearize fasta file (not necessary) 
 perl -pe '$. > 1 and /^>/ ? print "\n" : chomp' edited_3pUTRs.fasta > input.fasta
 
 #run python script
